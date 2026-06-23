@@ -10,7 +10,7 @@ export default async function handler(req, res) {
       `${process.env.VITE_JIRA_EMAIL}:${process.env.VITE_JIRA_API_TOKEN}`
     ).toString('base64')
  
-    const url = `https://${process.env.VITE_JIRA_DOMAIN}.atlassian.net/rest/api/3/search/jql`
+    const url = `https://${process.env.VITE_JIRA_DOMAIN}.atlassian.net/rest/api/3/issue/search`
  
     const jiraRes = await fetch(url, {
       method: 'POST',
