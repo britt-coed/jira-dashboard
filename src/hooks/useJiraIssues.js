@@ -19,7 +19,7 @@ export function useJiraIssues(jql = DEFAULT_JQL, maxResults = 50) {
       const credentials = btoa(
         `${import.meta.env.VITE_JIRA_EMAIL}:${import.meta.env.VITE_JIRA_API_TOKEN}`
       )
-      const res = await fetch(`/jira-api/search/jql`, {
+      const res = await fetch(`/api/jira`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
