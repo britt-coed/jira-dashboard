@@ -1,17 +1,5 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "vite",
-  "functions": {
-    "api/jira.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "rewrites": [
-    {
-      "source": "/api/jira",
-      "destination": "/api/jira"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
