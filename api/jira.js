@@ -1,4 +1,3 @@
-
 // Vercel serverless function — handles Jira API calls in production.
 // Vercel auto-parses JSON request bodies, so we use req.body directly.
 export default async function handler(req, res) {
@@ -10,16 +9,21 @@ export default async function handler(req, res) {
       `${process.env.VITE_JIRA_EMAIL}:${process.env.VITE_JIRA_API_TOKEN}`
     ).toString('base64')
  
-    const url = `https://${process.env.VITE_JIRA_DOMAIN}.atlassian.net/rest/api/3/issue/search`
+    const { jql, maxResults, fields } = req.body
+    const params = new URLSearchParams({
+      jql,
+      maxResults,
+      fields: Array.isArray(fields) ? fields.join(',') : fields,
+    })
+ 
+    const url = `https://${process.env.VITE_JIRA_DOMAIN}.atlassian.net/rest/api/3/issue/search?${params}`
  
     const jiraRes = await fetch(url, {
-      method: 'POST',
+      method: 'GET',
       headers: {
         Authorization: `Basic ${credentials}`,
-        'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      body: JSON.stringify(req.body),
     })
  
     const data = await jiraRes.json()
@@ -28,3 +32,4 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err.message })
   }
 }
+ 
