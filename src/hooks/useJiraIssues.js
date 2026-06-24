@@ -29,7 +29,7 @@ export function useJiraIssues(jql = DEFAULT_JQL, maxResults = 50) {
         body: JSON.stringify({
           jql,
           maxResults,
-          fields: ['summary', 'status', 'priority', 'assignee', 'issuetype', 'updated', 'project'],
+          fields: ['summary', 'status', 'priority', 'assignee', 'issuetype', 'updated', 'project', 'labels', 'description', 'reporter', 'created'],
         }),
       })
       if (!res.ok) throw new Error(`Jira API error: ${res.status} ${res.statusText}`)
