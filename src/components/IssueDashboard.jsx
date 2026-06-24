@@ -26,11 +26,11 @@ const PRIORITY_DOT = {
 // ── Presets ──────────────────────────────────────────────────────────────────
 
 const PRESETS = [
-  { label: 'All OQS requests',   jql: 'labels = "oqs-requests" ORDER BY updated DESC' },
-  { label: 'Open',               jql: 'labels = "oqs-requests" AND statusCategory != Done ORDER BY updated DESC' },
-  { label: 'In Progress',        jql: 'labels = "oqs-requests" AND status = "In Progress" ORDER BY updated DESC' },
-  { label: 'Done',               jql: 'labels = "oqs-requests" AND statusCategory = Done ORDER BY updated DESC' },
-  { label: 'High priority',      jql: 'labels = "oqs-requests" AND priority in (Highest, High) AND statusCategory != Done ORDER BY priority ASC' },
+  { label: 'All OQS requests',   jql: 'labels = "OQS-Request" ORDER BY updated DESC' },
+  { label: 'Open',               jql: 'labels = "OQS-Request" AND statusCategory != Done ORDER BY updated DESC' },
+  { label: 'In Progress',        jql: 'labels = "OQS-Request" AND status = "In Progress" ORDER BY updated DESC' },
+  { label: 'Done',               jql: 'labels = "OQS-Request" AND statusCategory = Done ORDER BY updated DESC' },
+  { label: 'High priority',      jql: 'labels = "OQS-Request" AND priority in (Highest, High) AND statusCategory != Done ORDER BY priority ASC' },
 ]
 
 // ── Stat card ────────────────────────────────────────────────────────────────
@@ -157,7 +157,7 @@ function IssueRow({ issue }) {
   const priority   = fields.priority?.name ?? '—'
   const assignee   = fields.assignee?.displayName ?? 'Unassigned'
   const updated    = new Date(fields.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-  const labels     = (fields.labels ?? []).filter(l => l !== 'oqs-requests')
+  const labels     = (fields.labels ?? []).filter(l => l !== 'OQS-Request')
   const dot        = PRIORITY_DOT[priority]
 
   const statusBg = STATUS_COLOR[statusName] ?? '#e2e8f0'
@@ -241,7 +241,7 @@ export default function IssueDashboard() {
       <div style={s.header}>
         <div>
           <h1 style={s.title}>OQS Requests</h1>
-          <p style={s.subtitle}>Tickets tagged <code style={s.tag}>oqs-requests</code></p>
+          <p style={s.subtitle}>Tickets tagged <code style={s.tag}>OQS-Request</code></p>
         </div>
         <button onClick={refetch} style={s.refreshBtn} disabled={loading}>
           {loading ? 'Loading…' : '↻ Refresh'}
