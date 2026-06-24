@@ -8,20 +8,21 @@ import { useJiraIssues } from '../hooks/useJiraIssues'
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_COLOR = {
-  'To Do':       '#e2e8f0',
-  'In Progress': '#3b82f6',
-  'In Review':   '#f59e0b',
-  'Done':        '#22c55e',
-  'Blocked':     '#ef4444',
+  'To Do':       '#d6e8e4',
+  'In Progress': '#2d7a6b',
+  'In Review':   '#4aab96',
+  'Code Review': '#4aab96',
+  'Done':        '#1a3d35',
+  'Blocked':     '#8b2020',
 }
-const STATUS_FG = { 'To Do': '#475569' }
+const STATUS_FG = { 'To Do': '#2d5a50' }
 
 const PRIORITY_DOT = {
-  Highest: '#ef4444',
-  High:    '#f97316',
-  Medium:  '#eab308',
-  Low:     '#3b82f6',
-  Lowest:  '#94a3b8',
+  Highest: '#8b2020',
+  High:    '#c05c2a',
+  Medium:  '#8a7a2e',
+  Low:     '#2d7a6b',
+  Lowest:  '#7a9e98',
 }
 
 const TYPE_FILTERS = [
@@ -177,8 +178,8 @@ function ProgressBar({ issues }) {
         <span>{done} of {total} completed</span>
         <span style={{ fontWeight: 600, color: '#22c55e' }}>{pct}%</span>
       </div>
-      <div style={{ background: '#e2e8f0', borderRadius: 99, height: 8, overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#22c55e,#16a34a)', height: '100%', borderRadius: 99, transition: 'width .4s ease' }} />
+      <div style={{ background: '#d6e8e4', borderRadius: 99, height: 8, overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#2d7a6b,#1a4d42)', height: '100%', borderRadius: 99, transition: 'width .4s ease' }} />
       </div>
     </div>
   )
@@ -259,7 +260,7 @@ function IssueRow({ issue, expanded, onToggle }) {
   return (
     <>
       <tr
-        style={{ ...s.row, cursor: 'pointer', background: expanded ? '#f8fafc' : 'transparent' }}
+        style={{ ...s.row, cursor: 'pointer', background: expanded ? '#e4f0ed' : 'transparent' }}
         onClick={onToggle}
       >
         <td style={s.td}><span style={s.keyLink}>{key}</span></td>
@@ -278,14 +279,13 @@ function IssueRow({ issue, expanded, onToggle }) {
             {priority}
           </span>
         </td>
-        <td style={{ ...s.td, fontSize: 13, color: '#475569' }}>{assignee}</td>
         <td style={{ ...s.td, fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>{updated}</td>
-        <td style={{ ...s.td, color: '#94a3b8', textAlign: 'center', fontSize: 10 }}>{expanded ? '▲' : '▼'}</td>
+        <td style={{ ...s.td, color: '#94a3b8', textAlign: 'center', fontSize: 10, width: 32 }}>{expanded ? '▲' : '▼'}</td>
       </tr>
 
       {expanded && (
-        <tr style={{ background: '#f8fafc' }}>
-          <td colSpan={7} style={{ padding: '0 20px 20px 20px', borderBottom: '1px solid #e2e8f0' }}>
+        <tr style={{ background: '#e4f0ed' }}>
+          <td colSpan={6} style={{ padding: '0 20px 20px 20px', borderBottom: '1px solid #e2e8f0' }}>
             <div style={{ paddingTop: 16 }}>
               <p style={s.accordionHeading}>Description</p>
               <p style={{ ...s.accordionBody, marginBottom: 16 }}>
@@ -367,10 +367,10 @@ export default function IssueDashboard() {
       {/* Stat cards */}
       {!loading && !error && (
         <div style={s.statsRow}>
-          <StatCard label="Total"       value={stats.total}      accent="#6366f1" />
-          <StatCard label="Open"        value={stats.open}       accent="#f59e0b" />
-          <StatCard label="In Progress" value={stats.inProgress} accent="#3b82f6" />
-          <StatCard label="Done"        value={stats.done}       accent="#22c55e" />
+          <StatCard label="Total"       value={stats.total}      accent="#1a4d42" />
+          <StatCard label="Open"        value={stats.open}       accent="#5a8f84" />
+          <StatCard label="In Progress" value={stats.inProgress} accent="#2d7a6b" />
+          <StatCard label="Done"        value={stats.done}       accent="#4aab96" />
         </div>
       )}
 
@@ -385,9 +385,6 @@ export default function IssueDashboard() {
           <TypeChart issues={issues} />
         </div>
       )}
-
-      {/* Client table */}
-      {!loading && !error && issues.length > 0 && <ClientTable issues={issues} />}
 
       {/* Preset filters */}
       <div style={s.filterSection}>
@@ -442,7 +439,7 @@ export default function IssueDashboard() {
             <table style={s.table}>
               <thead>
                 <tr>
-                  {['Key', 'Summary', 'Status', 'Priority', 'Assignee', 'Updated', ''].map((h, i) => (
+                  {['Key', 'Summary', 'Status', 'Priority', 'Updated', ''].map((h, i) => (
                     <th key={i} style={s.th}>{h}</th>
                   ))}
                 </tr>
@@ -464,50 +461,62 @@ export default function IssueDashboard() {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
+const C = {
+  bg:        '#f2ede6',   // warm cream
+  surface:   '#fffdf9',   // card surface
+  border:    '#ddd8cf',   // subtle border
+  dark:      '#1a2b28',   // deep charcoal-green
+  text:      '#2d3d3a',   // body text
+  muted:     '#7a8f8b',   // muted text
+  teal:      '#2d7a6b',   // primary teal
+  tealLight: '#e4f0ed',   // teal tint
+  tealDark:  '#1a4d42',   // deep teal
+}
+
 const s = {
-  page:            { fontFamily: "'Inter', system-ui, sans-serif", maxWidth: 1200, margin: '0 auto', padding: '32px 24px', background: '#f8fafc', minHeight: '100vh' },
-  header:          { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 },
-  title:           { fontSize: 26, fontWeight: 700, color: '#0f172a', margin: 0 },
-  subtitle:        { fontSize: 13, color: '#64748b', marginTop: 4, marginBottom: 0 },
-  tag:             { background: '#e0e7ff', color: '#4338ca', padding: '1px 6px', borderRadius: 4, fontSize: 12 },
-  refreshBtn:      { padding: '8px 18px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151', fontWeight: 500 },
+  page:            { fontFamily: "'Inter', system-ui, sans-serif", maxWidth: 1200, margin: '0 auto', padding: '32px 24px', background: C.bg, minHeight: '100vh' },
+  header:          { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, background: C.dark, margin: '-32px -24px 32px -24px', padding: '24px 32px', borderBottom: `3px solid ${C.teal}` },
+  title:           { fontSize: 24, fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '-0.02em' },
+  subtitle:        { fontSize: 13, color: 'rgba(255,255,255,0.55)', marginTop: 4, marginBottom: 0 },
+  tag:             { background: 'rgba(45,122,107,0.3)', color: '#7dd4c5', padding: '1px 6px', borderRadius: 4, fontSize: 12 },
+  refreshBtn:      { padding: '8px 18px', borderRadius: 8, border: `1px solid ${C.teal}`, background: 'transparent', cursor: 'pointer', fontSize: 13, color: '#7dd4c5', fontWeight: 500 },
 
   statsRow:        { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 20 },
-  card:            { background: '#fff', borderRadius: 10, padding: '16px 18px', display: 'flex', flexDirection: 'column', boxShadow: '0 1px 3px rgba(0,0,0,.06)' },
+  card:            { background: C.surface, borderRadius: 10, padding: '16px 18px', display: 'flex', flexDirection: 'column', boxShadow: '0 1px 3px rgba(0,0,0,.06)', border: `1px solid ${C.border}` },
 
   chartsRow:       { display: 'grid', gap: 12, marginBottom: 28 },
-  chartBox:        { background: '#fff', borderRadius: 10, padding: '16px 12px', boxShadow: '0 1px 3px rgba(0,0,0,.06)' },
-  chartLabel:      { fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px 4px' },
+  chartBox:        { background: C.surface, borderRadius: 10, padding: '16px 12px', boxShadow: '0 1px 3px rgba(0,0,0,.06)', border: `1px solid ${C.border}` },
+  chartLabel:      { fontSize: 11, fontWeight: 600, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px 4px' },
 
-  sectionTitle:    { fontSize: 15, fontWeight: 600, color: '#0f172a', marginBottom: 10 },
+  sectionTitle:    { fontSize: 15, fontWeight: 600, color: C.dark, marginBottom: 10 },
 
   filterSection:   { marginBottom: 10 },
   presets:         { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 },
-  presetBtn:       { padding: '6px 14px', borderRadius: 20, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151', fontWeight: 500 },
-  presetBtnActive: { background: '#6366f1', color: '#fff', borderColor: '#6366f1' },
+  presetBtn:       { padding: '6px 14px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.surface, cursor: 'pointer', fontSize: 13, color: C.text, fontWeight: 500 },
+  presetBtnActive: { background: C.teal, color: '#fff', borderColor: C.teal },
   jqlForm:         { display: 'flex', gap: 8 },
-  jqlInput:        { flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff', outline: 'none' },
-  searchBtn:       { padding: '8px 16px', borderRadius: 8, background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 },
+  jqlInput:        { flex: 1, padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, background: C.surface, outline: 'none', color: C.text },
+  searchBtn:       { padding: '8px 16px', borderRadius: 8, background: C.teal, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 },
 
   error:           { background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 16px', color: '#dc2626', marginBottom: 16, fontSize: 13 },
-  countLine:       { fontSize: 12, color: '#94a3b8', marginBottom: 8 },
+  countLine:       { fontSize: 12, color: C.muted, marginBottom: 8 },
 
-  tableWrap:       { background: '#fff', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,.06)', overflowX: 'auto', marginBottom: 8 },
+  tableWrap:       { background: C.surface, borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,.06)', overflowX: 'auto', marginBottom: 8, border: `1px solid ${C.border}` },
   table:           { width: '100%', borderCollapse: 'collapse', fontSize: 14 },
-  th:              { textAlign: 'left', padding: '11px 16px', fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' },
-  row:             { borderBottom: '1px solid #f8fafc' },
+  th:              { textAlign: 'left', padding: '11px 16px', fontSize: 11, fontWeight: 600, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap', background: C.surface },
+  row:             { borderBottom: `1px solid ${C.tealLight}` },
   td:              { padding: '11px 16px', verticalAlign: 'middle' },
-  keyLink:         { fontFamily: 'monospace', color: '#6366f1', fontWeight: 600, fontSize: 13 },
-  summary:         { display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1e293b' },
+  keyLink:         { fontFamily: 'monospace', color: C.teal, fontWeight: 700, fontSize: 13 },
+  summary:         { display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: C.dark },
   labelRow:        { display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' },
-  labelChip:       { fontSize: 10, padding: '2px 7px', borderRadius: 10, background: '#f1f5f9', color: '#475569', fontWeight: 500 },
+  labelChip:       { fontSize: 10, padding: '2px 7px', borderRadius: 10, background: C.tealLight, color: C.tealDark, fontWeight: 500 },
   statusBadge:     { display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500 },
-  empty:           { textAlign: 'center', color: '#94a3b8', padding: '48px 0', fontSize: 14 },
+  empty:           { textAlign: 'center', color: C.muted, padding: '48px 0', fontSize: 14 },
 
-  accordionHeading:{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 6px 0' },
-  accordionBody:   { fontSize: 14, color: '#374151', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' },
+  accordionHeading:{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 6px 0' },
+  accordionBody:   { fontSize: 14, color: C.text, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' },
   metaGrid:        { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px 24px' },
   metaItem:        { display: 'flex', flexDirection: 'column', gap: 2 },
-  metaLabel:       { fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  metaValue:       { fontSize: 13, color: '#374151' },
+  metaLabel:       { fontSize: 10, fontWeight: 600, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' },
+  metaValue:       { fontSize: 13, color: C.text },
 }
