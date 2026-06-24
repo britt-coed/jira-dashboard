@@ -257,7 +257,7 @@ function IssueRow({ issue, expanded, onToggle }) {
   const priority   = fields.priority?.name ?? '—'
   const labels     = (fields.labels ?? []).filter(l => l !== 'OQS-Request')
   const desc       = fields.description ? adfToText(fields.description).trim() : ''
-  const inStatus   = timeInStatus(fields.statuscategorychangedate)
+  const inStatus   = timeInStatus(fields.statuscategorychangedate ?? fields.updated)
 
   return (
     <>
@@ -306,7 +306,7 @@ function IssueRow({ issue, expanded, onToggle }) {
                 ['Project',        fields.project?.name ?? '—'],
                 ['Created',        fmt(fields.created)],
                 ['Updated',        fmt(fields.updated)],
-                ...(inStatus ? [['Time in status', inStatus]] : []),
+                ...(inStatus ? [['Time in status', inStatus + (fields.statuscategorychangedate ? '' : ' (approx)')]] : []),
               ].map(([label, val]) => (
                 <div key={label}>
                   <div style={{ fontSize: 10, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{label}</div>
