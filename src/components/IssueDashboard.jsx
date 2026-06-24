@@ -178,29 +178,29 @@ function PriorityChart({ issues }) {
   )
 }
 
-function AssigneeChart({ issues }) {
+function TypeChart({ issues }) {
   const data = useMemo(() => {
-    const open = issues.filter(({ fields }) => fields.status?.statusCategory?.key !== 'done')
     const c = {}
-    open.forEach(({ fields }) => {
-      const n = fields.assignee?.displayName ?? 'Unassigned'
+    issues.forEach(({ fields }) => {
+      const n = fields.issuetype?.name ?? 'Other'
       c[n] = (c[n] ?? 0) + 1
     })
     return Object.entries(c)
-      .map(([name, count]) => ({ name: name.split(' ')[0], count })) // first name only
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
   }, [issues])
+  const COLORS = ['#16a34a', '#2563eb', '#d97706', '#8b5cf6', '#ef4444', '#6b7280']
   if (!data.length) return null
   return (
-    <ChartCard title="Open tickets by assignee">
+    <ChartCard title="Tickets by type">
       <ResponsiveContainer width="100%" height={150}>
-        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
-          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} />
-          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: TEXT }} axisLine={false} tickLine={false} width={64} />
-          <Tooltip {...TIP} />
-          <Bar dataKey="count" radius={[0,4,4,0]} fill={BLUE} maxBarSize={14} />
-        </BarChart>
+        <PieChart>
+          <Pie data={data} dataKey="value" nameKey="name" cx="40%" cy="50%" innerRadius={36} outerRadius={60} paddingAngle={2}>
+            {data.map((e, i) => <Cell key={e.name} fill={COLORS[i % COLORS.length]} />)}
+          </Pie>
+          <Tooltip {...TIP} formatter={(v, n) => [v, n]} />
+          <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: 11, paddingLeft: 8 }} />
+        </PieChart>
       </ResponsiveContainer>
     </ChartCard>
   )
@@ -364,7 +364,7 @@ export default function IssueDashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
           <StatusChart   issues={issues} />
           <PriorityChart issues={issues} />
-          <AssigneeChart issues={issues} />
+          <TypeChart issues={issues} />
           <AgeChart      issues={issues} />
         </div>
       )}
