@@ -333,3 +333,102 @@ export default function IssueDashboard() {
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: BG, minHeight: '100vh', padding: '36px 32px', maxWidth: 1160, margin: '0 auto' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, margin: 0 }}>OQS Requests</h1>
+          <p style={{ fontSize: 13, color: MUTED, margin: '4px 0 0' }}>
+            Tracking all <code style={{ background: GREEN2, color: GREEN, padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>OQS-Request</code> tickets
+          </p>
+        </div>
+        <button onClick={refetch} disabled={loading}
+          style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${BORDER}`, background: WHITE, fontSize: 13, color: MUTED, cursor: 'pointer', fontWeight: 500 }}>
+          {loading ? 'Loading…' : '↻ Refresh'}
+        </button>
+      </div>
+
+      {/* Stat cards + progress */}
+      {!loading && !error && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 2fr', gap: 12, marginBottom: 16 }}>
+          <Stat label="Total"       value={stats.total}      color={TEXT} />
+          <Stat label="Open"        value={stats.open}       color={AMBER} />
+          <Stat label="In Progress" value={stats.inProgress} color={BLUE} />
+          <Stat label="Done"        value={stats.done}       color={GREEN} />
+          <Progress issues={issues} />
+        </div>
+      )}
+
+      {/* Charts 2×2 */}
+      {!loading && !error && issues.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
+          <StatusChart   issues={issues} />
+          <PriorityChart issues={issues} />
+          <AssigneeChart issues={issues} />
+          <AgeChart      issues={issues} />
+        </div>
+      )}
+
+      {/* Controls */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+        {PRESETS.map((p, i) => (
+          <button key={i} onClick={() => handlePreset(i)}
+            style={{ padding: '6px 14px', borderRadius: 99, fontSize: 13, fontWeight: 500, cursor: 'pointer', border: `1px solid ${preset === i && !customJql ? GREEN : BORDER}`, background: preset === i && !customJql ? GREEN : WHITE, color: preset === i && !customJql ? WHITE : MUTED }}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8, flex: 1, minWidth: 240 }}>
+          <input value={customJql} onChange={e => setCustomJql(e.target.value)} placeholder="Custom JQL…"
+            style={{ flex: 1, padding: '7px 12px', borderRadius: 8, border: `1px solid ${BORDER}`, fontSize: 13, outline: 'none', background: WHITE, color: TEXT }} />
+          <button type="submit" style={{ padding: '7px 14px', borderRadius: 8, background: GREEN, color: WHITE, border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Search</button>
+        </form>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {TYPE_FILTERS.map(f => (
+            <button key={f.value} onClick={() => setTypeFilter(f.value)}
+              style={{ padding: '6px 12px', borderRadius: 99, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: `1px solid ${typeFilter === f.value ? GREEN : BORDER}`, background: typeFilter === f.value ? GREEN2 : WHITE, color: typeFilter === f.value ? GREEN : MUTED }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <select value={sortIdx} onChange={e => setSortIdx(Number(e.target.value))}
+          style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${BORDER}`, fontSize: 13, background: WHITE, color: TEXT, cursor: 'pointer', outline: 'none' }}>
+          {SORT_OPTIONS.map((o, i) => <option key={i} value={i}>{o.label}</option>)}
+        </select>
+      </div>
+
+      {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 16px', color: '#dc2626', marginBottom: 16, fontSize: 13 }}>{error}</div>}
+
+      {!error && (
+        <>
+          <div style={{ fontSize: 12, color: MUTED, marginBottom: 8 }}>
+            {loading ? 'Loading…' : `${displayed.length} issues`}
+          </div>
+          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
+                  {['Key', 'Summary', 'Status', 'Priority', 'Updated', ''].map((h, i) => (
+                    <th key={i} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 11, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', background: BG }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {displayed.map(issue => (
+                  <IssueRow key={issue.id} issue={issue} expanded={!!expanded[issue.id]} onToggle={() => toggle(issue.id)} />
+                ))}
+              </tbody>
+            </table>
+            {!loading && displayed.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '48px 0', color: MUTED, fontSize: 14 }}>No issues found.</div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
