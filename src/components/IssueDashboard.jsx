@@ -166,14 +166,7 @@ function IssueRow({ issue }) {
   return (
     <tr style={s.row}>
       <td style={s.td}>
-        <a
-          href={`https://unherd.atlassian.net/browse/${key}`}
-          target="_blank"
-          rel="noreferrer"
-          style={s.keyLink}
-        >
-          {key}
-        </a>
+        <span style={s.keyLink}>{key}</span>
       </td>
       <td style={{ ...s.td, maxWidth: 380 }}>
         <span style={s.summary}>{fields.summary}</span>
