@@ -17,7 +17,7 @@ export default async function handler(req, res) {
       fields: Array.isArray(fields) ? fields.join(',') : fields,
     })
 
-    const jiraUrl = `https://${process.env.VITE_JIRA_DOMAIN}.atlassian.net/rest/api/3/issue/search?${params}`
+    const jiraUrl = `https://${process.env.VITE_JIRA_DOMAIN}.atlassian.net/rest/api/3/myself`
 
     const jiraRes = await fetch(jiraUrl, {
       method: 'GET',
