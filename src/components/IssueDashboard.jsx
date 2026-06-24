@@ -80,6 +80,17 @@ function daysSince(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
 }
 
+function timeInStatus(dateStr) {
+  if (!dateStr) return null
+  const d = daysSince(dateStr)
+  if (d === 0) return 'Since today'
+  if (d === 1) return '1 day'
+  if (d < 7)  return `${d} days`
+  if (d < 30) return `${Math.floor(d / 7)}w ${d % 7}d`
+  const m = Math.floor(d / 30)
+  return `${m} month${m > 1 ? 's' : ''}`
+}
+
 // ─── small components ─────────────────────────────────────────────────────────
 function Stat({ label, value, color = TEXT }) {
   return (
@@ -246,11 +257,22 @@ function IssueRow({ issue, expanded, onToggle }) {
   const priority   = fields.priority?.name ?? '—'
   const labels     = (fields.labels ?? []).filter(l => l !== 'OQS-Request')
   const desc       = fields.description ? adfToText(fields.description).trim() : ''
+  const inStatus   = timeInStatus(fields.statuscategorychangedate)
 
   return (
     <>
       <tr onClick={onToggle} style={{ cursor: 'pointer', borderBottom: `1px solid ${expanded ? 'transparent' : BORDER}`, background: expanded ? '#f0fdf4' : WHITE }}>
-        <td style={td}><span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: GREEN }}>{key}</span></td>
+        <td style={td}>
+          <a
+            href={`https://unherd.atlassian.net/browse/${key}`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={e => e.stopPropagation()}
+            style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: MUTED, textDecoration: 'none', borderBottom: `1px dashed ${BORDER}` }}
+          >
+            {key}
+          </a>
+        </td>
         <td style={{ ...td, maxWidth: 400 }}>
           <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, color: TEXT }}>{fields.summary}</div>
           {labels.length > 0 && (
@@ -279,11 +301,12 @@ function IssueRow({ issue, expanded, onToggle }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px 24px' }}>
               {[
-                ['Reporter', fields.reporter?.displayName ?? '—'],
-                ['Type',     fields.issuetype?.name ?? '—'],
-                ['Project',  fields.project?.name ?? '—'],
-                ['Created',  fmt(fields.created)],
-                ['Updated',  fmt(fields.updated)],
+                ['Reporter',       fields.reporter?.displayName ?? '—'],
+                ['Type',           fields.issuetype?.name ?? '—'],
+                ['Project',        fields.project?.name ?? '—'],
+                ['Created',        fmt(fields.created)],
+                ['Updated',        fmt(fields.updated)],
+                ...(inStatus ? [['Time in status', inStatus]] : []),
               ].map(([label, val]) => (
                 <div key={label}>
                   <div style={{ fontSize: 10, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{label}</div>
