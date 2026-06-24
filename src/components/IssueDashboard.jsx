@@ -1,56 +1,57 @@
 import { useState, useMemo } from 'react'
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer,
-  PieChart, Pie, Legend,
-} from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer } from 'recharts'
 import { useJiraIssues } from '../hooks/useJiraIssues'
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ─── palette ──────────────────────────────────────────────────────────────────
+const GREEN  = '#16a34a'
+const GREEN2 = '#dcfce7'
+const AMBER  = '#d97706'
+const BLUE   = '#2563eb'
+const SLATE  = '#64748b'
+const BORDER = '#e5e7eb'
+const TEXT   = '#111827'
+const MUTED  = '#6b7280'
+const BG     = '#f9fafb'
+const WHITE  = '#ffffff'
 
 const STATUS_COLOR = {
-  'To Do':       '#d6e8e4',
-  'In Progress': '#2d7a6b',
-  'In Review':   '#4aab96',
-  'Code Review': '#4aab96',
-  'Done':        '#1a3d35',
-  'Blocked':     '#8b2020',
+  'To Do':        { bg: '#f1f5f9', text: '#475569' },
+  'In Progress':  { bg: '#dbeafe', text: '#1d4ed8' },
+  'In Review':    { bg: '#fef3c7', text: '#b45309' },
+  'Code Review':  { bg: '#fef3c7', text: '#b45309' },
+  'Done':         { bg: '#dcfce7', text: '#15803d' },
+  'Blocked':      { bg: '#fee2e2', text: '#b91c1c' },
 }
-const STATUS_FG = { 'To Do': '#2d5a50' }
 
-const PRIORITY_DOT = {
-  Highest: '#8b2020',
-  High:    '#c05c2a',
-  Medium:  '#8a7a2e',
-  Low:     '#2d7a6b',
-  Lowest:  '#7a9e98',
+const PRIORITY_COLOR = {
+  Highest: '#ef4444', High: '#f97316', Medium: '#eab308', Low: '#3b82f6', Lowest: '#94a3b8',
 }
+
+const CHART_COLORS = ['#16a34a','#4ade80','#86efac','#bbf7d0','#6b7280']
+
+const PRESETS = [
+  { label: 'All',          jql: 'labels = "OQS-Request" ORDER BY updated DESC' },
+  { label: 'Open',         jql: 'labels = "OQS-Request" AND statusCategory != Done ORDER BY updated DESC' },
+  { label: 'In Progress',  jql: 'labels = "OQS-Request" AND status = "In Progress" ORDER BY updated DESC' },
+  { label: 'Done',         jql: 'labels = "OQS-Request" AND statusCategory = Done ORDER BY updated DESC' },
+  { label: 'High priority',jql: 'labels = "OQS-Request" AND priority in (Highest, High) AND statusCategory != Done ORDER BY priority ASC' },
+]
 
 const TYPE_FILTERS = [
-  { label: 'All types',        value: '' },
-  { label: 'Support Request',  value: 'Support Request' },
-  { label: 'Bug',              value: 'Bug' },
+  { label: 'All types', value: '' },
+  { label: 'Support Request', value: 'Support Request' },
+  { label: 'Bug', value: 'Bug' },
 ]
 
 const SORT_OPTIONS = [
-  { label: 'Updated (newest)', field: 'updated',  dir: 'desc' },
-  { label: 'Updated (oldest)', field: 'updated',  dir: 'asc' },
-  { label: 'Priority',         field: 'priority', dir: 'asc' },
-  { label: 'Status',           field: 'status',   dir: 'asc' },
-  { label: 'Key',              field: 'key',      dir: 'asc' },
+  { label: 'Newest first',  field: 'updated',  dir: 'desc' },
+  { label: 'Oldest first',  field: 'updated',  dir: 'asc' },
+  { label: 'Priority',      field: 'priority', dir: 'asc' },
+  { label: 'Status',        field: 'status',   dir: 'asc' },
 ]
 
 const PRIORITY_ORDER = { Highest: 0, High: 1, Medium: 2, Low: 3, Lowest: 4 }
-const STATUS_ORDER   = { 'Blocked': 0, 'In Progress': 1, 'In Review': 2, 'To Do': 3, 'Done': 4 }
-
-const PRESETS = [
-  { label: 'All OQS requests', jql: 'labels = "OQS-Request" ORDER BY updated DESC' },
-  { label: 'Open',             jql: 'labels = "OQS-Request" AND statusCategory != Done ORDER BY updated DESC' },
-  { label: 'In Progress',      jql: 'labels = "OQS-Request" AND status = "In Progress" ORDER BY updated DESC' },
-  { label: 'Done',             jql: 'labels = "OQS-Request" AND statusCategory = Done ORDER BY updated DESC' },
-  { label: 'High priority',    jql: 'labels = "OQS-Request" AND priority in (Highest, High) AND statusCategory != Done ORDER BY priority ASC' },
-]
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
+const STATUS_ORDER   = { Blocked: 0, 'In Progress': 1, 'In Review': 2, 'Code Review': 2, 'To Do': 3, Done: 4 }
 
 function adfToText(node) {
   if (!node) return ''
@@ -59,42 +60,61 @@ function adfToText(node) {
   return ''
 }
 
-function fmtDate(str) {
+function fmt(str) {
   if (!str) return '—'
   return new Date(str).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function sortIssues(issues, { field, dir }) {
-  const mult = dir === 'asc' ? 1 : -1
+  const m = dir === 'asc' ? 1 : -1
   return [...issues].sort((a, b) => {
-    let av, bv
-    if (field === 'updated')  { av = a.fields.updated; bv = b.fields.updated; return mult * av.localeCompare(bv) }
-    if (field === 'priority') { av = PRIORITY_ORDER[a.fields.priority?.name] ?? 99; bv = PRIORITY_ORDER[b.fields.priority?.name] ?? 99; return mult * (av - bv) }
-    if (field === 'status')   { av = STATUS_ORDER[a.fields.status?.name] ?? 99; bv = STATUS_ORDER[b.fields.status?.name] ?? 99; return mult * (av - bv) }
-    if (field === 'key')      { return mult * a.key.localeCompare(b.key) }
+    if (field === 'updated')  return m * a.fields.updated.localeCompare(b.fields.updated)
+    if (field === 'priority') return m * ((PRIORITY_ORDER[a.fields.priority?.name] ?? 9) - (PRIORITY_ORDER[b.fields.priority?.name] ?? 9))
+    if (field === 'status')   return m * ((STATUS_ORDER[a.fields.status?.name] ?? 9) - (STATUS_ORDER[b.fields.status?.name] ?? 9))
     return 0
   })
 }
 
-// ── Tiny components ───────────────────────────────────────────────────────────
-
-function StatCard({ label, value, accent }) {
+// ─── stat card ────────────────────────────────────────────────────────────────
+function Stat({ label, value, color = TEXT }) {
   return (
-    <div style={{ ...s.card, borderTop: `3px solid ${accent}` }}>
-      <span style={{ fontSize: 28, fontWeight: 700, color: accent }}>{value}</span>
-      <span style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{label}</span>
+    <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '20px 24px' }}>
+      <div style={{ fontSize: 28, fontWeight: 700, color, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 13, color: MUTED, marginTop: 6 }}>{label}</div>
     </div>
   )
 }
 
-function StatusBadge({ name }) {
-  const bg = STATUS_COLOR[name] ?? '#e2e8f0'
-  const fg = STATUS_FG[name] ?? '#fff'
-  return <span style={{ ...s.statusBadge, background: bg, color: fg }}>{name}</span>
+// ─── status badge ─────────────────────────────────────────────────────────────
+function Badge({ name }) {
+  const { bg, text } = STATUS_COLOR[name] ?? { bg: '#f1f5f9', text: '#475569' }
+  return (
+    <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 500, background: bg, color: text, whiteSpace: 'nowrap' }}>
+      {name}
+    </span>
+  )
 }
 
-// ── Charts ────────────────────────────────────────────────────────────────────
+// ─── progress bar ─────────────────────────────────────────────────────────────
+function Progress({ issues }) {
+  const total = issues.length
+  const done  = issues.filter(({ fields }) => fields.status?.statusCategory?.key === 'done').length
+  const pct   = total ? Math.round((done / total) * 100) : 0
+  return (
+    <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '20px 24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>Overall progress</span>
+        <span style={{ fontSize: 22, fontWeight: 700, color: GREEN }}>{pct}%</span>
+      </div>
+      <div style={{ background: '#f1f5f9', borderRadius: 99, height: 6 }}>
+        <div style={{ width: `${pct}%`, background: GREEN, height: 6, borderRadius: 99, transition: 'width .4s' }} />
+      </div>
+      <div style={{ fontSize: 12, color: MUTED, marginTop: 8 }}>{done} of {total} completed</div>
+    </div>
+  )
+}
 
+// ─── chart ────────────────────────────────────────────────────────────────────
 function StatusChart({ issues }) {
   const data = useMemo(() => {
     const c = {}
@@ -103,15 +123,15 @@ function StatusChart({ issues }) {
   }, [issues])
   if (!data.length) return null
   return (
-    <div style={s.chartBox}>
-      <p style={s.chartLabel}>By status</p>
-      <ResponsiveContainer width="100%" height={150}>
-        <BarChart data={data} margin={{ top: 4, right: 12, left: -20, bottom: 0 }}>
-          <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-          <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-          <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }} cursor={{ fill: '#f8fafc' }} />
-          <Bar dataKey="count" radius={[4,4,0,0]} maxBarSize={36}>
-            {data.map(e => <Cell key={e.name} fill={STATUS_COLOR[e.name] ?? '#8b5cf6'} />)}
+    <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '20px 24px' }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 16 }}>By status</div>
+      <ResponsiveContainer width="100%" height={140}>
+        <BarChart data={data} margin={{ top: 0, right: 0, left: -28, bottom: 0 }}>
+          <XAxis dataKey="name" tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} />
+          <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} />
+          <Tooltip contentStyle={{ borderRadius: 8, border: `1px solid ${BORDER}`, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,.08)' }} cursor={{ fill: BG }} />
+          <Bar dataKey="count" radius={[4,4,0,0]} maxBarSize={32}>
+            {data.map((e, i) => <Cell key={e.name} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -119,193 +139,60 @@ function StatusChart({ issues }) {
   )
 }
 
-function PriorityChart({ issues }) {
-  const data = useMemo(() => {
-    const c = {}
-    issues.forEach(({ fields }) => { const n = fields.priority?.name ?? 'Unknown'; c[n] = (c[n] ?? 0) + 1 })
-    return Object.entries(c).map(([name, count]) => ({ name, count, fill: PRIORITY_DOT[name] ?? '#94a3b8' }))
-  }, [issues])
-  if (!data.length) return null
-  return (
-    <div style={s.chartBox}>
-      <p style={s.chartLabel}>By priority</p>
-      <ResponsiveContainer width="100%" height={150}>
-        <PieChart>
-          <Pie data={data} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={50} paddingAngle={2}>
-            {data.map(e => <Cell key={e.name} fill={e.fill} />)}
-          </Pie>
-          <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }} />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
-function TypeChart({ issues }) {
-  const data = useMemo(() => {
-    const c = {}
-    issues.forEach(({ fields }) => { const n = fields.issuetype?.name ?? 'Other'; c[n] = (c[n] ?? 0) + 1 })
-    return Object.entries(c).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
-  }, [issues])
-  if (!data.length) return null
-  const COLORS = ['#6366f1','#f59e0b','#22c55e','#ef4444','#8b5cf6']
-  return (
-    <div style={s.chartBox}>
-      <p style={s.chartLabel}>By type</p>
-      <ResponsiveContainer width="100%" height={150}>
-        <PieChart>
-          <Pie data={data} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={50} paddingAngle={2}>
-            {data.map((e, i) => <Cell key={e.name} fill={COLORS[i % COLORS.length]} />)}
-          </Pie>
-          <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }} />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
-// ── Progress bar ──────────────────────────────────────────────────────────────
-
-function ProgressBar({ issues }) {
-  const total = issues.length
-  const done = issues.filter(({ fields }) => fields.status?.statusCategory?.key === 'done').length
-  const pct = total ? Math.round((done / total) * 100) : 0
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 6 }}>
-        <span>{done} of {total} completed</span>
-        <span style={{ fontWeight: 600, color: '#22c55e' }}>{pct}%</span>
-      </div>
-      <div style={{ background: '#d6e8e4', borderRadius: 99, height: 8, overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#2d7a6b,#1a4d42)', height: '100%', borderRadius: 99, transition: 'width .4s ease' }} />
-      </div>
-    </div>
-  )
-}
-
-// ── Client table ──────────────────────────────────────────────────────────────
-
-function ClientTable({ issues }) {
-  const rows = useMemo(() => {
-    const map = {}
-    issues.forEach(({ fields }) => {
-      const name = fields.reporter?.displayName ?? 'Unknown'
-      if (!map[name]) map[name] = { name, total: 0, open: 0, inProgress: 0, done: 0, types: {} }
-      const r = map[name]
-      r.total++
-      const cat = fields.status?.statusCategory?.key
-      if (cat === 'done') r.done++
-      else if (fields.status?.name === 'In Progress') r.inProgress++
-      else r.open++
-      const type = fields.issuetype?.name ?? 'Other'
-      r.types[type] = (r.types[type] ?? 0) + 1
-    })
-    return Object.values(map).sort((a, b) => b.total - a.total)
-  }, [issues])
-
-  if (!rows.length) return null
-
-  return (
-    <div style={{ marginBottom: 28 }}>
-      <h2 style={s.sectionTitle}>Requests by client</h2>
-      <div style={s.tableWrap}>
-        <table style={s.table}>
-          <thead>
-            <tr>
-              {['Client / Reporter', 'Total', 'Open', 'In Progress', 'Done', 'Types'].map(h => (
-                <th key={h} style={s.th}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(row => (
-              <tr key={row.name} style={s.row}>
-                <td style={{ ...s.td, fontWeight: 600, color: '#1e293b' }}>{row.name}</td>
-                <td style={{ ...s.td, color: '#6366f1', fontWeight: 600 }}>{row.total}</td>
-                <td style={{ ...s.td, color: '#f59e0b' }}>{row.open}</td>
-                <td style={{ ...s.td, color: '#3b82f6' }}>{row.inProgress}</td>
-                <td style={{ ...s.td, color: '#22c55e' }}>{row.done}</td>
-                <td style={s.td}>
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    {Object.entries(row.types).map(([type, count]) => (
-                      <span key={type} style={s.labelChip}>{type} ({count})</span>
-                    ))}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
-// ── Accordion issue row ───────────────────────────────────────────────────────
-
+// ─── issue row ────────────────────────────────────────────────────────────────
 function IssueRow({ issue, expanded, onToggle }) {
   const { key, fields } = issue
-  const statusName  = fields.status?.name ?? '—'
-  const priority    = fields.priority?.name ?? '—'
-  const assignee    = fields.assignee?.displayName ?? 'Unassigned'
-  const reporter    = fields.reporter?.displayName ?? '—'
-  const updated     = fmtDate(fields.updated)
-  const created     = fmtDate(fields.created)
-  const labels      = (fields.labels ?? []).filter(l => l !== 'OQS-Request')
-  const description = fields.description ? adfToText(fields.description).trim() : null
-  const dotColor    = PRIORITY_DOT[priority]
+  const statusName = fields.status?.name ?? '—'
+  const priority   = fields.priority?.name ?? '—'
+  const labels     = (fields.labels ?? []).filter(l => l !== 'OQS-Request')
+  const desc       = fields.description ? adfToText(fields.description).trim() : ''
 
   return (
     <>
       <tr
-        style={{ ...s.row, cursor: 'pointer', background: expanded ? '#e4f0ed' : 'transparent' }}
         onClick={onToggle}
+        style={{ cursor: 'pointer', borderBottom: `1px solid ${expanded ? 'transparent' : BORDER}`, background: expanded ? '#f0fdf4' : WHITE }}
       >
-        <td style={s.td}><span style={s.keyLink}>{key}</span></td>
-        <td style={{ ...s.td, maxWidth: 360 }}>
-          <span style={s.summary}>{fields.summary}</span>
+        <td style={td}><span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: GREEN }}>{key}</span></td>
+        <td style={{ ...td, maxWidth: 400 }}>
+          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, color: TEXT }}>{fields.summary}</div>
           {labels.length > 0 && (
-            <div style={s.labelRow}>
-              {labels.map(l => <span key={l} style={s.labelChip}>{l}</span>)}
+            <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+              {labels.map(l => <span key={l} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, background: '#f1f5f9', color: MUTED }}>{l}</span>)}
             </div>
           )}
         </td>
-        <td style={s.td}><StatusBadge name={statusName} /></td>
-        <td style={s.td}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#374151' }}>
-            {dotColor && <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />}
+        <td style={td}><Badge name={statusName} /></td>
+        <td style={td}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: TEXT }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: PRIORITY_COLOR[priority] ?? '#94a3b8', flexShrink: 0 }} />
             {priority}
           </span>
         </td>
-        <td style={{ ...s.td, fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>{updated}</td>
-        <td style={{ ...s.td, color: '#94a3b8', textAlign: 'center', fontSize: 10, width: 32 }}>{expanded ? '▲' : '▼'}</td>
+        <td style={{ ...td, fontSize: 12, color: MUTED, whiteSpace: 'nowrap' }}>{fmt(fields.updated)}</td>
+        <td style={{ ...td, width: 28, color: MUTED, fontSize: 10, textAlign: 'center' }}>{expanded ? '▲' : '▼'}</td>
       </tr>
 
       {expanded && (
-        <tr style={{ background: '#e4f0ed' }}>
-          <td colSpan={6} style={{ padding: '0 20px 20px 20px', borderBottom: '1px solid #e2e8f0' }}>
-            <div style={{ paddingTop: 16 }}>
-              <p style={s.accordionHeading}>Description</p>
-              <p style={{ ...s.accordionBody, marginBottom: 16 }}>
-                {description || <em style={{ color: '#94a3b8' }}>No description provided.</em>}
-              </p>
-              <div style={s.metaGrid}>
-                {[
-                  ['Reporter',  reporter],
-                  ['Assignee',  assignee],
-                  ['Type',      fields.issuetype?.name ?? '—'],
-                  ['Project',   fields.project?.name ?? '—'],
-                  ['Created',   created],
-                  ['Updated',   updated],
-                ].map(([label, val]) => (
-                  <div key={label} style={s.metaItem}>
-                    <span style={s.metaLabel}>{label}</span>
-                    <span style={s.metaValue}>{val}</span>
-                  </div>
-                ))}
-              </div>
+        <tr style={{ background: '#f0fdf4', borderBottom: `1px solid ${BORDER}` }}>
+          <td colSpan={6} style={{ padding: '16px 20px 20px' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Description</div>
+            <div style={{ fontSize: 14, color: TEXT, lineHeight: 1.65, marginBottom: 20, maxWidth: 700 }}>
+              {desc || <span style={{ color: MUTED, fontStyle: 'italic' }}>No description.</span>}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px 24px' }}>
+              {[
+                ['Reporter', fields.reporter?.displayName ?? '—'],
+                ['Type',     fields.issuetype?.name ?? '—'],
+                ['Project',  fields.project?.name ?? '—'],
+                ['Created',  fmt(fields.created)],
+                ['Updated',  fmt(fields.updated)],
+              ].map(([label, val]) => (
+                <div key={label}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{label}</div>
+                  <div style={{ fontSize: 13, color: TEXT }}>{val}</div>
+                </div>
+              ))}
             </div>
           </td>
         </tr>
@@ -314,209 +201,135 @@ function IssueRow({ issue, expanded, onToggle }) {
   )
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+const td = { padding: '13px 16px', verticalAlign: 'middle' }
 
+// ─── dashboard ────────────────────────────────────────────────────────────────
 export default function IssueDashboard() {
-  const [activePreset, setActivePreset] = useState(0)
-  const [customJql, setCustomJql]       = useState('')
-  const [jql, setJql]                   = useState(PRESETS[0].jql)
-  const [typeFilter, setTypeFilter]     = useState('')
-  const [sortIdx, setSortIdx]           = useState(0)
-  const [expanded, setExpanded]         = useState({})
+  const [preset,     setPreset]     = useState(0)
+  const [jql,        setJql]        = useState(PRESETS[0].jql)
+  const [customJql,  setCustomJql]  = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [sortIdx,    setSortIdx]    = useState(0)
+  const [expanded,   setExpanded]   = useState({})
 
   const { issues, total, loading, error, refetch } = useJiraIssues(jql, 100)
 
-  // Apply type filter + sort client-side
-  const displayIssues = useMemo(() => {
-    let list = typeFilter
-      ? issues.filter(({ fields }) => fields.issuetype?.name === typeFilter)
-      : issues
-    return sortIssues(list, SORT_OPTIONS[sortIdx])
+  const displayed = useMemo(() => {
+    const filtered = typeFilter ? issues.filter(({ fields }) => fields.issuetype?.name === typeFilter) : issues
+    return sortIssues(filtered, SORT_OPTIONS[sortIdx])
   }, [issues, typeFilter, sortIdx])
 
   const stats = useMemo(() => {
-    const done       = issues.filter(({ fields }) => fields.status?.statusCategory?.key === 'done').length
-    const inProgress = issues.filter(({ fields }) => fields.status?.name === 'In Progress').length
-    const open       = issues.length - done
-    return { total: issues.length, done, inProgress, open }
+    const done = issues.filter(({ fields }) => fields.status?.statusCategory?.key === 'done').length
+    return {
+      total:      issues.length,
+      open:       issues.filter(({ fields }) => fields.status?.statusCategory?.key !== 'done').length,
+      inProgress: issues.filter(({ fields }) => fields.status?.name === 'In Progress').length,
+      done,
+    }
   }, [issues])
 
-  const handlePreset = (i) => {
-    setActivePreset(i); setCustomJql(''); setJql(PRESETS[i].jql); setExpanded({})
-  }
-  const handleSearch = (e) => {
-    e.preventDefault()
-    if (customJql.trim()) { setActivePreset(-1); setJql(customJql.trim()); setExpanded({}) }
-  }
-  const toggleRow = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }))
+  const toggle = (id) => setExpanded(p => ({ ...p, [id]: !p[id] }))
+
+  const handlePreset = (i) => { setPreset(i); setJql(PRESETS[i].jql); setCustomJql(''); setExpanded({}) }
+  const handleSearch = (e) => { e.preventDefault(); if (customJql.trim()) { setPreset(-1); setJql(customJql.trim()); setExpanded({}) } }
 
   return (
-    <div style={s.page}>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: BG, minHeight: '100vh', padding: '36px 32px', maxWidth: 1100, margin: '0 auto' }}>
 
       {/* Header */}
-      <div style={s.header}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
         <div>
-          <h1 style={s.title}>OQS Requests</h1>
-          <p style={s.subtitle}>Tickets tagged <code style={s.tag}>OQS-Request</code></p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT, margin: 0 }}>OQS Requests</h1>
+          <p style={{ fontSize: 13, color: MUTED, margin: '4px 0 0' }}>Tracking all <code style={{ background: GREEN2, color: GREEN, padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>OQS-Request</code> tickets</p>
         </div>
-        <button onClick={refetch} style={s.refreshBtn} disabled={loading}>
+        <button onClick={refetch} disabled={loading}
+          style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${BORDER}`, background: WHITE, fontSize: 13, color: MUTED, cursor: 'pointer', fontWeight: 500 }}>
           {loading ? 'Loading…' : '↻ Refresh'}
         </button>
       </div>
 
-      {/* Stat cards */}
+      {/* Stats row */}
       {!loading && !error && (
-        <div style={s.statsRow}>
-          <StatCard label="Total"       value={stats.total}      accent="#1a4d42" />
-          <StatCard label="Open"        value={stats.open}       accent="#5a8f84" />
-          <StatCard label="In Progress" value={stats.inProgress} accent="#2d7a6b" />
-          <StatCard label="Done"        value={stats.done}       accent="#4aab96" />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 2fr', gap: 12, marginBottom: 12 }}>
+          <Stat label="Total"       value={stats.total}      color={TEXT} />
+          <Stat label="Open"        value={stats.open}       color={AMBER} />
+          <Stat label="In Progress" value={stats.inProgress} color={BLUE} />
+          <Stat label="Done"        value={stats.done}       color={GREEN} />
+          <Progress issues={issues} />
         </div>
       )}
 
-      {/* Progress */}
-      {!loading && !error && issues.length > 0 && <ProgressBar issues={issues} />}
-
-      {/* Charts */}
+      {/* Chart */}
       {!loading && !error && issues.length > 0 && (
-        <div style={{ ...s.chartsRow, gridTemplateColumns: '1fr 1fr 1fr' }}>
+        <div style={{ marginBottom: 28 }}>
           <StatusChart issues={issues} />
-          <PriorityChart issues={issues} />
-          <TypeChart issues={issues} />
         </div>
       )}
 
-      {/* Preset filters */}
-      <div style={s.filterSection}>
-        <div style={s.presets}>
-          {PRESETS.map((p, i) => (
-            <button key={i} onClick={() => handlePreset(i)}
-              style={{ ...s.presetBtn, ...(activePreset === i && !customJql ? s.presetBtnActive : {}) }}>
-              {p.label}
-            </button>
-          ))}
-        </div>
-        <form onSubmit={handleSearch} style={s.jqlForm}>
-          <input style={s.jqlInput} type="text" placeholder="Custom JQL…"
-            value={customJql} onChange={e => setCustomJql(e.target.value)} />
-          <button type="submit" style={s.searchBtn}>Search</button>
-        </form>
+      {/* Controls */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
+        {PRESETS.map((p, i) => (
+          <button key={i} onClick={() => handlePreset(i)}
+            style={{ padding: '6px 14px', borderRadius: 99, fontSize: 13, fontWeight: 500, cursor: 'pointer', border: `1px solid ${preset === i && !customJql ? GREEN : BORDER}`, background: preset === i && !customJql ? GREEN : WHITE, color: preset === i && !customJql ? WHITE : MUTED, transition: 'all .15s' }}>
+            {p.label}
+          </button>
+        ))}
       </div>
 
-      {/* Type + sort row */}
-      {!loading && !error && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 12, color: '#64748b', marginRight: 4 }}>Filter by type:</span>
-          {TYPE_FILTERS.map(tf => (
-            <button key={tf.value} onClick={() => setTypeFilter(tf.value)}
-              style={{ ...s.presetBtn, ...(typeFilter === tf.value ? s.presetBtnActive : {}), padding: '4px 12px', fontSize: 12 }}>
-              {tf.label}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8, flex: 1, minWidth: 240 }}>
+          <input value={customJql} onChange={e => setCustomJql(e.target.value)} placeholder="Custom JQL…"
+            style={{ flex: 1, padding: '7px 12px', borderRadius: 8, border: `1px solid ${BORDER}`, fontSize: 13, outline: 'none', background: WHITE, color: TEXT }} />
+          <button type="submit" style={{ padding: '7px 14px', borderRadius: 8, background: GREEN, color: WHITE, border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Search</button>
+        </form>
+
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {TYPE_FILTERS.map(f => (
+            <button key={f.value} onClick={() => setTypeFilter(f.value)}
+              style={{ padding: '6px 12px', borderRadius: 99, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: `1px solid ${typeFilter === f.value ? GREEN : BORDER}`, background: typeFilter === f.value ? GREEN2 : WHITE, color: typeFilter === f.value ? GREEN : MUTED }}>
+              {f.label}
             </button>
           ))}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: '#64748b' }}>Sort:</span>
-            <select
-              value={sortIdx}
-              onChange={e => setSortIdx(Number(e.target.value))}
-              style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff', color: '#374151', cursor: 'pointer' }}
-            >
-              {SORT_OPTIONS.map((o, i) => <option key={i} value={i}>{o.label}</option>)}
-            </select>
-          </div>
         </div>
-      )}
 
-      {/* Error */}
-      {error && <div style={s.error}><strong>Error:</strong> {error}</div>}
+        <select value={sortIdx} onChange={e => setSortIdx(Number(e.target.value))}
+          style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${BORDER}`, fontSize: 13, background: WHITE, color: TEXT, cursor: 'pointer', outline: 'none' }}>
+          {SORT_OPTIONS.map((o, i) => <option key={i} value={i}>{o.label}</option>)}
+        </select>
+      </div>
 
-      {/* Issues table */}
+      {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 16px', color: '#dc2626', marginBottom: 16, fontSize: 13 }}>{error}</div>}
+
+      {/* Table */}
       {!error && (
         <>
-          <p style={s.countLine}>
-            {loading ? 'Fetching…' : `Showing ${displayIssues.length}${typeFilter ? ` ${typeFilter}` : ''} issues`}
-          </p>
-          <div style={s.tableWrap}>
-            <table style={s.table}>
+          <div style={{ fontSize: 12, color: MUTED, marginBottom: 8 }}>
+            {loading ? 'Loading…' : `${displayed.length} issues`}
+          </div>
+          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <thead>
-                <tr>
+                <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
                   {['Key', 'Summary', 'Status', 'Priority', 'Updated', ''].map((h, i) => (
-                    <th key={i} style={s.th}>{h}</th>
+                    <th key={i} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 11, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', background: BG }}>
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {displayIssues.map(issue => (
-                  <IssueRow key={issue.id} issue={issue}
-                    expanded={!!expanded[issue.id]} onToggle={() => toggleRow(issue.id)} />
+                {displayed.map(issue => (
+                  <IssueRow key={issue.id} issue={issue} expanded={!!expanded[issue.id]} onToggle={() => toggle(issue.id)} />
                 ))}
               </tbody>
             </table>
-            {!loading && displayIssues.length === 0 && <div style={s.empty}>No issues found.</div>}
+            {!loading && displayed.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '48px 0', color: MUTED, fontSize: 14 }}>No issues found.</div>
+            )}
           </div>
         </>
       )}
     </div>
   )
-}
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const C = {
-  bg:        '#f2ede6',   // warm cream
-  surface:   '#fffdf9',   // card surface
-  border:    '#ddd8cf',   // subtle border
-  dark:      '#1a2b28',   // deep charcoal-green
-  text:      '#2d3d3a',   // body text
-  muted:     '#7a8f8b',   // muted text
-  teal:      '#2d7a6b',   // primary teal
-  tealLight: '#e4f0ed',   // teal tint
-  tealDark:  '#1a4d42',   // deep teal
-}
-
-const s = {
-  page:            { fontFamily: "'Inter', system-ui, sans-serif", maxWidth: 1200, margin: '0 auto', padding: '32px 24px', background: C.bg, minHeight: '100vh' },
-  header:          { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, background: C.dark, margin: '-32px -24px 32px -24px', padding: '24px 32px', borderBottom: `3px solid ${C.teal}` },
-  title:           { fontSize: 24, fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '-0.02em' },
-  subtitle:        { fontSize: 13, color: 'rgba(255,255,255,0.55)', marginTop: 4, marginBottom: 0 },
-  tag:             { background: 'rgba(45,122,107,0.3)', color: '#7dd4c5', padding: '1px 6px', borderRadius: 4, fontSize: 12 },
-  refreshBtn:      { padding: '8px 18px', borderRadius: 8, border: `1px solid ${C.teal}`, background: 'transparent', cursor: 'pointer', fontSize: 13, color: '#7dd4c5', fontWeight: 500 },
-
-  statsRow:        { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 20 },
-  card:            { background: C.surface, borderRadius: 10, padding: '16px 18px', display: 'flex', flexDirection: 'column', boxShadow: '0 1px 3px rgba(0,0,0,.06)', border: `1px solid ${C.border}` },
-
-  chartsRow:       { display: 'grid', gap: 12, marginBottom: 28 },
-  chartBox:        { background: C.surface, borderRadius: 10, padding: '16px 12px', boxShadow: '0 1px 3px rgba(0,0,0,.06)', border: `1px solid ${C.border}` },
-  chartLabel:      { fontSize: 11, fontWeight: 600, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px 4px' },
-
-  sectionTitle:    { fontSize: 15, fontWeight: 600, color: C.dark, marginBottom: 10 },
-
-  filterSection:   { marginBottom: 10 },
-  presets:         { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 },
-  presetBtn:       { padding: '6px 14px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.surface, cursor: 'pointer', fontSize: 13, color: C.text, fontWeight: 500 },
-  presetBtnActive: { background: C.teal, color: '#fff', borderColor: C.teal },
-  jqlForm:         { display: 'flex', gap: 8 },
-  jqlInput:        { flex: 1, padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, background: C.surface, outline: 'none', color: C.text },
-  searchBtn:       { padding: '8px 16px', borderRadius: 8, background: C.teal, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 },
-
-  error:           { background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 16px', color: '#dc2626', marginBottom: 16, fontSize: 13 },
-  countLine:       { fontSize: 12, color: C.muted, marginBottom: 8 },
-
-  tableWrap:       { background: C.surface, borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,.06)', overflowX: 'auto', marginBottom: 8, border: `1px solid ${C.border}` },
-  table:           { width: '100%', borderCollapse: 'collapse', fontSize: 14 },
-  th:              { textAlign: 'left', padding: '11px 16px', fontSize: 11, fontWeight: 600, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap', background: C.surface },
-  row:             { borderBottom: `1px solid ${C.tealLight}` },
-  td:              { padding: '11px 16px', verticalAlign: 'middle' },
-  keyLink:         { fontFamily: 'monospace', color: C.teal, fontWeight: 700, fontSize: 13 },
-  summary:         { display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: C.dark },
-  labelRow:        { display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' },
-  labelChip:       { fontSize: 10, padding: '2px 7px', borderRadius: 10, background: C.tealLight, color: C.tealDark, fontWeight: 500 },
-  statusBadge:     { display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500 },
-  empty:           { textAlign: 'center', color: C.muted, padding: '48px 0', fontSize: 14 },
-
-  accordionHeading:{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 6px 0' },
-  accordionBody:   { fontSize: 14, color: C.text, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' },
-  metaGrid:        { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px 24px' },
-  metaItem:        { display: 'flex', flexDirection: 'column', gap: 2 },
-  metaLabel:       { fontSize: 10, fontWeight: 600, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' },
-  metaValue:       { fontSize: 13, color: C.text },
 }
