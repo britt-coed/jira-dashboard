@@ -270,10 +270,10 @@ function IssueDetail({ fields }) {
   return (
     <div style={{ padding: '16px 16px 20px', borderTop: `1px solid ${GREEN2}` }}>
       <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Description</div>
-      <div style={{ fontSize: 14, color: TEXT, lineHeight: 1.65, marginBottom: 16 }}>
+      <div style={{ fontSize: 14, color: TEXT, lineHeight: 1.65, marginBottom: 16, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
         {desc || <span style={{ color: MUTED, fontStyle: 'italic' }}>No description.</span>}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px 20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '10px 16px' }}>
         {meta.map(([label, val]) => (
           <div key={label}>
             <div style={{ fontSize: 10, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{label}</div>
@@ -343,7 +343,7 @@ function IssueCard({ issue, expanded, onToggle }) {
           </a>
           <span style={{ fontSize: 10, color: MUTED }}>{expanded ? '▲' : '▼'}</span>
         </div>
-        <div style={{ fontSize: 14, color: TEXT, fontWeight: 500, marginBottom: 10, lineHeight: 1.4 }}>{fields.summary}</div>
+        <div style={{ fontSize: 14, color: TEXT, fontWeight: 500, marginBottom: 10, lineHeight: 1.4, wordBreak: 'break-word' }}>{fields.summary}</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           <Badge name={fields.status?.name ?? '—'} />
           <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: MUTED }}>
@@ -395,10 +395,10 @@ export default function IssueDashboard() {
   const handlePreset = (i) => { setPreset(i); setJql(PRESETS[i].jql); setCustomJql(''); setExpanded({}) }
   const handleSearch = (e) => { e.preventDefault(); if (customJql.trim()) { setPreset(-1); setJql(customJql.trim()); setExpanded({}) } }
 
-  const p = isMobile ? '20px 16px' : '36px 32px'
+  const p = isMobile ? '16px 12px' : '36px 32px'
 
   return (
-    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: BG, minHeight: '100vh', padding: p, maxWidth: 1160, margin: '0 auto', boxSizing: 'border-box' }}>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: BG, minHeight: '100vh', padding: p, maxWidth: 1160, margin: '0 auto', boxSizing: 'border-box', overflowX: 'hidden', width: '100%' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', marginBottom: 24, gap: 12 }}>
