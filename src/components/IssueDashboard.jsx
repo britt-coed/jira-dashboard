@@ -376,7 +376,7 @@ export default function IssueDashboard() {
   const [expanded,   setExpanded]   = useState({})
 
   const { issues: raw, total, loading, error, refetch } = useJiraIssues(jql, 100)
-  const issues = useMemo(() => raw.filter(({ fields }) => fields.issuetype?.name !== 'Epic'), [raw])
+const issues = useMemo(() => raw, [raw])
 
   const displayed = useMemo(() => {
     const filtered = typeFilter ? issues.filter(({ fields }) => fields.issuetype?.name === typeFilter) : issues
