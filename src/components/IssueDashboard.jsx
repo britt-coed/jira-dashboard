@@ -375,9 +375,8 @@ export default function IssueDashboard() {
   const [sortIdx,    setSortIdx]    = useState(0)
   const [expanded,   setExpanded]   = useState({})
 
-  const { issues: raw, total, loading, error, refetch } = useJiraIssues(jql, 100)
+  const { issues: raw, total, loading, error, refetch } = useJiraIssues(jql, 500)
 const issues = useMemo(() => raw, [raw])
-
   const displayed = useMemo(() => {
     const filtered = typeFilter ? issues.filter(({ fields }) => fields.issuetype?.name === typeFilter) : issues
     return sortIssues(filtered, SORT_OPTIONS[sortIdx])
@@ -479,7 +478,7 @@ const issues = useMemo(() => raw, [raw])
       {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 16px', color: '#dc2626', marginBottom: 16, fontSize: 13 }}>{error}</div>}
 
       {/* Issue count */}
-      {!error && <div style={{ fontSize: 12, color: MUTED, marginBottom: 8 }}>{loading ? 'Loading…' : `${displayed.length} issues`}</div>}
+      {!error && <div style={{ fontSize: 12, color: MUTED, marginBottom: 8 }}>{loading ? 'Loading…' : `${displayed.length} of ${total} issues`}</div>}
 
       {/* Mobile: cards / Desktop: table */}
       {!error && !loading && isMobile && (
