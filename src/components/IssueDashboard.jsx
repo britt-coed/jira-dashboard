@@ -29,12 +29,14 @@ const PRIORITY_COLOR = {
   Highest: '#ef4444', High: '#f97316', Medium: '#eab308', Low: '#3b82f6', Lowest: '#94a3b8',
 }
 
+const BASE = 'project = "CoEditor Platform" AND labels = "OQS-Request"'
+
 const PRESETS = [
-  { label: 'All',           jql: 'labels = "OQS-Request" ORDER BY updated DESC' },
-  { label: 'Open',          jql: 'labels = "OQS-Request" AND statusCategory != Done ORDER BY updated DESC' },
-  { label: 'In Progress',   jql: 'labels = "OQS-Request" AND status = "In Progress" ORDER BY updated DESC' },
-  { label: 'Done',          jql: 'labels = "OQS-Request" AND statusCategory = Done ORDER BY updated DESC' },
-  { label: 'High priority', jql: 'labels = "OQS-Request" AND priority in (Highest, High) AND statusCategory != Done ORDER BY priority ASC' },
+  { label: 'All',           jql: `${BASE} ORDER BY updated DESC` },
+  { label: 'Open',          jql: `${BASE} AND statusCategory != Done ORDER BY updated DESC` },
+  { label: 'In Progress',   jql: `${BASE} AND status = "In Progress" ORDER BY updated DESC` },
+  { label: 'Done',          jql: `${BASE} AND statusCategory = Done ORDER BY updated DESC` },
+  { label: 'High priority', jql: `${BASE} AND priority in (Highest, High) AND statusCategory != Done ORDER BY priority ASC` },
 ]
 
 const TYPE_FILTERS = [
@@ -513,5 +515,3 @@ export default function IssueDashboard() {
         </div>
       )}
     </div>
-  )
-}
